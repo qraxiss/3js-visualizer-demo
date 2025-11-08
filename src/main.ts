@@ -17,6 +17,25 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
+const startOverlay = document.createElement('div');
+startOverlay.id = 'start-overlay';
+startOverlay.innerText = 'click to start visualization';
+startOverlay.style.position = 'absolute';
+startOverlay.style.top = '0';
+startOverlay.style.left = '0';
+startOverlay.style.width = '100%';
+startOverlay.style.height = '100%';
+startOverlay.style.display = 'flex';
+startOverlay.style.justifyContent = 'center';
+startOverlay.style.alignItems = 'center';
+startOverlay.style.color = 'white';
+startOverlay.style.fontSize = '2rem';
+startOverlay.style.fontFamily = 'sans-serif';
+startOverlay.style.cursor = 'pointer';
+startOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+startOverlay.style.zIndex = '10';
+document.body.appendChild(startOverlay);
+
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
@@ -67,26 +86,10 @@ const setupAudioTrack = async (url: string) => {
   analyser.connect(audioContext.destination);
   analyser.connect(mediaStreamDestination);
 
-  source.start();
-
   return { analyser, dataArray, url, source, audioBuffer };
 };
 
 const musicName = 'till-i-die'
-
-const [bass, drums, vocal, other] = await Promise.all([
-  setupAudioTrack(`${musicName}/bass.mp3`),
-  setupAudioTrack(`${musicName}/drums.mp3`),
-  setupAudioTrack(`${musicName}/vocal.mp3`),
-  setupAudioTrack(`${musicName}/other.mp3`)
-]);
-
-const maxDuration = Math.max(
-  bass.audioBuffer.duration,
-  drums.audioBuffer.duration,
-  vocal.audioBuffer.duration,
-  other.audioBuffer.duration
-);
 
 const girlGlb = await loader.loadAsync('/girl.glb')
 scene.add(girlGlb.scene)
@@ -178,7 +181,12 @@ let orbitAngle = 0;
 
 const globalSpeedFactor = 1.0;
 
-let animationFrameId: number | null = null;
+const [bass, drums, vocal, other] = await Promise.all([
+  setupAudioTrack(`${musicName}/bass.mp3`),
+  setupAudioTrack(`${musicName}/drums.mp3`),
+  setupAudioTrack(`${musicName}/vocal.mp3`),
+  setupAudioTrack(`${musicName}/other.mp3`)
+]);
 
 function animate() {
   const bassAmp = getAmplitude(bass)
@@ -217,10 +225,28 @@ function animate() {
   renderer.render(scene, camera);
 
 
-  animationFrameId = requestAnimationFrame(animate);
+  requestAnimationFrame(animate);
 }
 
-animate();
+const startExperience = () => {
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+
+  if (document.getElementById('start-overlay')) {
+    document.body.removeChild(startOverlay);
+  }
+
+  bass.source.start();
+  drums.source.start();
+  vocal.source.start();
+  other.source.start();
+
+  animate();
+};
+
+window.addEventListener('click', startExperience, { once: true });
+
 
 // recorder.start();
 
